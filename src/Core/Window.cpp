@@ -48,7 +48,17 @@ double Window::getTime()
     return glfwGetTime();
 }
 
+float Window::getDeltaTime()
+{
+    float current = getTime();
+    float dt = current - last_;
+    last_ = current;
+    return dt;
+}
+
+
 bool Window::isOpen() const
 {
     return !glfwWindowShouldClose(id_);
 }
+

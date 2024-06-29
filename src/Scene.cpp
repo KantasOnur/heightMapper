@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "Core/Mesh.h"
+#include "Game.h"
 #include <glm/glm.hpp>
 
 using namespace glm;
@@ -28,6 +29,8 @@ Scene::Scene()
 static void drawTriangle(Shader& shader)
 {
     shader.bind();
+    shader.setMatrix4f("u_projectionMatrix", Game::getCamera().getProjection());
+    shader.setMatrix4f("u_modelViewMatrix", Game::getCamera().getView());
     triangle->draw(shader);
 }
 void Scene::render()

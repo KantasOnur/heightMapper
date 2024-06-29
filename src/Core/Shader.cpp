@@ -25,11 +25,6 @@ Shader::~Shader()
     glDeleteProgram(id_);
 }
 
-void Shader::bind() const
-{
-    glUseProgram(id_);
-}
-
 unsigned int Shader::createShader(GLenum type, const std::string &sourcePath)
 {
     std::ifstream stream(sourcePath);
@@ -88,3 +83,23 @@ void Shader::createProgram(const std::vector<unsigned int> &shaders)
 
     id_ = program;
 }
+
+void Shader::bind() const
+{
+    glUseProgram(id_);
+}
+
+GLint Shader::getUniformLocation(const std::string &name)
+{
+    if(uniformMap_.find(name) == uniformMap_.end())
+    {
+        uniformMap_[name] = glGetUniformLocation(id_, name.c_str());
+    }
+    return uniformMap_[name];
+}
+
+void Shader::setMatrix4f(const std::string &name, const glm::mat4 &val)
+{
+    glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, &val[0][0]);
+}
+
