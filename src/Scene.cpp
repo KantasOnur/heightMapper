@@ -1,7 +1,12 @@
+#define GLM_ENABLE_EXPERIMENTAL
 #include "Scene.h"
+
+#include <iostream>
+
 #include "Core/Mesh.h"
 #include "Game.h"
 #include <glm/glm.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 using namespace glm;
 
@@ -17,7 +22,7 @@ std::vector<Vertex> generatePlaneVertices(int div, float width)
     {
         for(int col = 0; col < div + 1; ++col)
         {
-            Vertex vertex = {{col * triangleSide, 0.0, row * -triangleSide}, {1.0f, 1.0f, 1.0f}};
+            Vertex vertex = {{col * triangleSide, 0.0, row * -triangleSide}, {0.05, 0.53f, 0.8f}};
             vertices.push_back(vertex);
         }
     }
@@ -45,10 +50,10 @@ std::vector<Index> generatePlaneIndices(int div)
 }
 Scene::Scene()
 {
-    std::vector<Vertex> planeVertices = generatePlaneVertices(100, 3);
-    std::vector<Index> planeIndices = generatePlaneIndices(100);
+    std::vector<Vertex> planeVertices = generatePlaneVertices(2000, 3);
+    std::vector<Index> planeIndices = generatePlaneIndices(2000);
 
-
+    std::cout << planeVertices.size() << std::endl;
     triangle = std::make_unique<Mesh>(planeVertices, planeIndices);
     sceneShader = std::make_unique<Shader>("../shaders/scene.vert", "../shaders/scene.frag");
 }
@@ -60,10 +65,14 @@ static void drawTriangle(Shader& shader)
     shader.bind();
     shader.setMatrix4f("u_projectionMatrix", Game::getCamera().getProjection());
     shader.setMatrix4f("u_modelViewMatrix", Game::getCamera().getView());
+    shader.setFloat1f("u_time", Game::getWindow().getTime());
+    shader.setVec3f("lightPos", Game::getCamera().getPosition());
+    shader.setVec3f("viewPos", Game::getCamera().getPosition());
     triangle->draw(shader);
 }
 void Scene::render()
 {
+    //std::cout << glm::to_string(Game::getCamera().getPosition()) << std::endl;
     drawTriangle(*sceneShader);
 }
 

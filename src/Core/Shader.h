@@ -22,6 +22,8 @@ public:
     void bind() const;
     GLint getUniformLocation(const std::string& name);
     void setMatrix4f(const std::string& name, const glm::mat4& val);
+    void setVec3f(const std::string& name, const glm::vec3& val);
+    void setFloat1f(const std::string& name, const float& val);
 };
 
 #endif //SHADER_H

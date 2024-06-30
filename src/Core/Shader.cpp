@@ -103,3 +103,13 @@ void Shader::setMatrix4f(const std::string &name, const glm::mat4 &val)
     glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, &val[0][0]);
 }
 
+void Shader::setVec3f(const std::string &name, const glm::vec3 &val)
+{
+    glUniform3fv(getUniformLocation(name), 1, &val[0]);
+}
+
+
+void Shader::setFloat1f(const std::string &name, const float &val)
+{
+    glUniform1f(getUniformLocation(name), val);
+}

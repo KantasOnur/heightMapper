@@ -24,6 +24,7 @@ public:
         glm::vec3 initialLookDir = {0.0f, 0.0f, -1.0f});
     glm::mat4 getProjection() const {return projM_;}
     glm::mat4 getView() const {return viewM_;}
+    glm::vec3 getPosition() const {return position_;}
     void update(float dt);
 };
 #endif //CAMERA_H
