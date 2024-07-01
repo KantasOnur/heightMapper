@@ -19,6 +19,8 @@ void Game::run()
 {
     //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
     while(window_->isOpen())
     {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

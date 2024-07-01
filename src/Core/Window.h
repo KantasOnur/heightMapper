@@ -5,16 +5,16 @@
 
 struct windowParams
 {
-    int width;
-    int height;
+    float width;
+    float height;
 };
 
 class Window
 {
 private:
     GLFWwindow* id_;
-    int width_;
-    int height_;
+    float width_;
+    float height_;
     float last_ = 0.0f;
 public:
     Window(int width, int height);

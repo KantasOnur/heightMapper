@@ -8,6 +8,7 @@ struct Vertex
 {
     glm::vec3 position;
     glm::vec3 colour;
+    glm::vec2 uvCoords;
 };
 
 using Index = unsigned int;

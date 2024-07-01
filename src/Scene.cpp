@@ -5,24 +5,27 @@
 
 #include "Core/Mesh.h"
 #include "Game.h"
-#include <glm/glm.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 using namespace glm;
 
-std::unique_ptr<Mesh> triangle;
+std::unique_ptr<Mesh> water;
+std::unique_ptr<Mesh> terrain;
 
-std::unique_ptr<Shader> sceneShader;
+std::unique_ptr<Shader> waterShader;
+std::unique_ptr<Shader> terrainShader;
 
-std::vector<Vertex> generatePlaneVertices(int div, float width)
-{
+std::vector<Vertex> generatePlaneVertices(int div, float width) {
     std::vector<Vertex> vertices;
     float triangleSide = width / div;
-    for(int row = 0; row < div + 1; ++row)
-    {
-        for(int col = 0; col < div + 1; ++col)
-        {
-            Vertex vertex = {{col * triangleSide, 0.0, row * -triangleSide}, {0.149, 0.4f, 0.5686f}};
+    float stepSize = triangleSide / width;
+    for (int row = 0; row < div + 1; ++row) {
+        for (int col = 0; col < div + 1; ++col) {
+
+            glm::vec3 position(col * triangleSide, 0.0f, -row * triangleSide);
+            glm::vec3 color(0.368f, 0.96f, 0.822f);
+            glm::vec2 uvCoords(stepSize * col, stepSize * row);
+            Vertex vertex = { position, color, uvCoords };
             vertices.push_back(vertex);
         }
     }
@@ -50,17 +53,19 @@ std::vector<Index> generatePlaneIndices(int div)
 }
 Scene::Scene()
 {
-    std::vector<Vertex> planeVertices = generatePlaneVertices(200, 5);
-    std::vector<Index> planeIndices = generatePlaneIndices(200);
+    std::vector<Vertex> planeVertices = generatePlaneVertices(1000, 5);
+    std::vector<Index> planeIndices = generatePlaneIndices(1000);
 
-    std::cout << planeVertices.size() << std::endl;
-    triangle = std::make_unique<Mesh>(planeVertices, planeIndices);
-    sceneShader = std::make_unique<Shader>("../shaders/scene.vert", "../shaders/scene.frag");
+    water = std::make_unique<Mesh>(planeVertices, planeIndices);
+    waterShader = std::make_unique<Shader>("../shaders/water.vert", "../shaders/water.frag");
+
+    terrain = std::make_unique<Mesh>(planeVertices, planeIndices);
+    terrainShader = std::make_unique<Shader>("../shaders/terrain.vert", "../shaders/terrain.frag");
 }
 
 
 
-static void drawTriangle(Shader& shader)
+static void drawWater(Shader& shader)
 {
     shader.bind();
     shader.setMatrix4f("u_projectionMatrix", Game::getCamera().getProjection());
@@ -68,11 +73,19 @@ static void drawTriangle(Shader& shader)
     shader.setFloat1f("u_time", Game::getWindow().getTime());
     shader.setVec3f("lightPos", {2.5, 1, -2.5});
     shader.setVec3f("viewPos", Game::getCamera().getPosition());
-    triangle->draw(shader);
+    water->draw(shader);
+}
+
+static void drawTerrain(Shader& shader)
+{
+    shader.bind();
+    shader.setMatrix4f("u_projectionMatrix", Game::getCamera().getProjection());
+    shader.setMatrix4f("u_modelViewMatrix", Game::getCamera().getView());
+    water->draw(shader);
 }
 void Scene::render()
 {
-    std::cout << "pos: " << glm::to_string(Game::getCamera().getPosition()) << std::endl;
-    drawTriangle(*sceneShader);
+    drawWater(*waterShader);
+    //drawTerrain(*terrainShader);
 }
 

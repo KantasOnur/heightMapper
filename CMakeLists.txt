@@ -24,7 +24,8 @@ add_executable(heightMapper src/main.cpp
         src/Events/EventManager.cpp
         src/Events/EventManager.h
         src/Core/Camera.cpp
-        src/Core/Camera.h)
+        src/Core/Camera.h
+        src/Core/stb.cpp)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/include)
 

@@ -3,7 +3,6 @@
 #include <glm/gtx/string_cast.hpp>
 #include <complex>
 #include "../Game.h"
-#include <iostream>
 Camera::Camera(float fov, glm::vec3 position, glm::vec3 up, glm::vec3 initialLookDir)
     : position_(position), up_(up), front_(initialLookDir),
     yaw_(glm::degrees(atan2(initialLookDir.z, initialLookDir.x))),
@@ -92,5 +91,5 @@ void Camera::update(float dt)
 
 void Camera::updateProjectionMatrix()
 {
-    projM_ = glm::perspective(fov_, Game::getWindow().getAspectRatio(), 0.1f, 1000.0f);
+    projM_ = glm::perspective(fov_, Game::getWindow().getAspectRatio(), 0.1f, 100.0f);
 }
