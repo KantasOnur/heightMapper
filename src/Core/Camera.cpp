@@ -92,5 +92,5 @@ void Camera::update(float dt)
 
 void Camera::updateProjectionMatrix()
 {
-    projM_ = glm::perspective(fov_, Game::getWindow().getAspectRatio(), 0.1f, 10.0f);
+    projM_ = glm::perspective(fov_, Game::getWindow().getAspectRatio(), 0.1f, 1000.0f);
 }

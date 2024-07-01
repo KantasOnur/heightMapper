@@ -20,7 +20,7 @@ private:
     void updatePosition(Input &input, float dt);
     void updateProjectionMatrix();
 public:
-    Camera(float fov = 45.0f, glm::vec3 position = {0.0f, 0.0f, 0.0f}, glm::vec3 up = {0.0f, 1.0f, 0.0f},
+    Camera(float fov = 45.0f, glm::vec3 position = {0,0,0}, glm::vec3 up = {0.0f, 1.0f, 0.0f},
         glm::vec3 initialLookDir = {0.0f, 0.0f, -1.0f});
     glm::mat4 getProjection() const {return projM_;}
     glm::mat4 getView() const {return viewM_;}
