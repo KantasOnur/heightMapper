@@ -45,29 +45,24 @@ vec3 wave()
     float frequency = 1.12;
 
     float y_displacement = 0.0f;
-    vec2 direction = normalize(vec2(1, 0));
+    vec2 direction = normalize(vec2(0, -1));
 
     for (int i = 0; i < 32; i++)
     {
-        float new_amplitude = 0.2*pow(amplitude, i);
+        float new_amplitude = 0.2 * pow(amplitude, i);
         float new_frequency = pow(frequency, i);
-        float inside_sin = new_frequency*dot(direction, vec2(inPos.xz)-vec2(dfdx,dfdz))+u_time*o[i%4];
+        vec2 posXZ = vec2(inPos.xz) - 2.0 * vec2(dfdx, dfdz);
+        float inside_sin = new_frequency * dot(direction, posXZ) + u_time * o[i % 4];
 
-        y_displacement += exp(new_amplitude * sin(inside_sin)) - 1;
-        dfdx += new_amplitude*cos(inside_sin)*new_frequency*direction.x * (y_displacement+1);
-        dfdz += new_amplitude*cos(inside_sin)*new_frequency*direction.y * (y_displacement+1);
+        y_displacement += min(max(exp(new_amplitude * sin(inside_sin)) - 1.0, 0.0), 1.5);
 
-        direction = normalize(rotate(direction, 0.125*pi)+direction);
-        /*
-        float new_amplitude = 0.12 * pow(amplitude, i);
-        float new_frequency = pow(frequency, i);
-        float inside_sin = dot(direction*new_frequency, vec2(inPos.xz)) + u_time*o[i%4];
+        // Avoid if statements for GPU performance.
+        float cos_term = new_amplitude * cos(inside_sin) * new_frequency;
+        dfdx += cos_term * direction.x * (y_displacement + 1.0);
+        dfdz += cos_term * direction.y * (y_displacement + 1.0);
 
-        y_displacement += exp(new_amplitude * sin(inside_sin)) - 1;
-        dfdx += new_amplitude*cos(inside_sin)*direction.x*new_frequency * (y_displacement+1); //+1 since one is a constant, so dont want to include in the derivative
-        dfdz += new_amplitude*cos(inside_sin)*direction.y*new_frequency * (y_displacement+1);
-        direction = normalize(rotate(direction, 0.125*pi));
-        */
+
+        direction = normalize(rotate(direction,0.125*pi));
     }
     return vec3(dfdx, y_displacement, dfdz);
 }

@@ -30,16 +30,15 @@ void main()
 
 
     float scatterDistance = length(fragPos - lightPos); // Simplified distance
-
-    vec3 scatterAttenuation = exp(-vec3(1.0f) * scatterDistance);
+    vec3 scatterAttenuation = exp(-vec3(0.2f) * scatterDistance);
 
     vec3 exitPoint = fragPos + fragNormal * scatterDistance;
     vec3 exitDirection = normalize(exitPoint - fragPos);
 
-    vec3 scatteredLight = scatterAttenuation;
+    vec3 scatteredLight = scatterAttenuation * exitDirection;
 
 
-    vec3 result = min((ambient + scatteredLight  + specular), 1.0f) * objectColor;
+    vec3 result = (ambient + scatteredLight + specular) * objectColor;
     color = vec4(result, 1.0f);
 }
 
