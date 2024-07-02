@@ -82,11 +82,16 @@ void Shader::createProgram(const std::vector<unsigned int> &shaders)
         glDeleteShader(shader);
 
     id_ = program;
+    unbind();
 }
 
 void Shader::bind() const
 {
     glUseProgram(id_);
+}
+void Shader::unbind() const
+{
+    glUseProgram(0);
 }
 
 GLint Shader::getUniformLocation(const std::string &name)
@@ -112,4 +117,9 @@ void Shader::setVec3f(const std::string &name, const glm::vec3 &val)
 void Shader::setFloat1f(const std::string &name, const float &val)
 {
     glUniform1f(getUniformLocation(name), val);
+}
+
+void Shader::setInt(const std::string &name, const int &val)
+{
+    glUniform1i(getUniformLocation(name), val);
 }

@@ -2,8 +2,10 @@
 #include "Scene.h"
 
 #include <iostream>
-
+#include <fstream>
 #include "Core/Mesh.h"
+#include "Core/Texture.h"
+
 #include "Game.h"
 #include <glm/gtx/string_cast.hpp>
 
@@ -11,14 +13,18 @@ using namespace glm;
 
 std::unique_ptr<Mesh> water;
 std::unique_ptr<Mesh> terrain;
+std::unique_ptr<Texture> heightMap;
 
 std::unique_ptr<Shader> waterShader;
 std::unique_ptr<Shader> terrainShader;
 
+unsigned int texture;
+
+
 std::vector<Vertex> generatePlaneVertices(int div, float width) {
     std::vector<Vertex> vertices;
     float triangleSide = width / div;
-    float stepSize = triangleSide / width;
+    float stepSize = 1.0f / div;
     for (int row = 0; row < div + 1; ++row) {
         for (int col = 0; col < div + 1; ++col) {
 
@@ -53,14 +59,21 @@ std::vector<Index> generatePlaneIndices(int div)
 }
 Scene::Scene()
 {
-    std::vector<Vertex> planeVertices = generatePlaneVertices(1000, 5);
-    std::vector<Index> planeIndices = generatePlaneIndices(1000);
+
+    std::vector<Vertex> planeVertices = generatePlaneVertices(400, 10);
+    std::vector<Index> planeIndices = generatePlaneIndices(400);
 
     water = std::make_unique<Mesh>(planeVertices, planeIndices);
     waterShader = std::make_unique<Shader>("../shaders/water.vert", "../shaders/water.frag");
 
+
     terrain = std::make_unique<Mesh>(planeVertices, planeIndices);
     terrainShader = std::make_unique<Shader>("../shaders/terrain.vert", "../shaders/terrain.frag");
+    terrainShader->bind();
+    terrainShader->setFloat1f("triangleSide",10.0f / 1000.0f);
+    terrainShader->setFloat1f("stepSize", 1.0f/1000.0f);
+    terrainShader->unbind();
+    heightMap = std::make_unique<Texture>("../assets/heightMap.png", terrainShader);
 }
 
 
@@ -71,21 +84,24 @@ static void drawWater(Shader& shader)
     shader.setMatrix4f("u_projectionMatrix", Game::getCamera().getProjection());
     shader.setMatrix4f("u_modelViewMatrix", Game::getCamera().getView());
     shader.setFloat1f("u_time", Game::getWindow().getTime());
-    shader.setVec3f("lightPos", {2.5, 1, -2.5});
+    shader.setVec3f("lightPos", Game::getCamera().getPosition());
     shader.setVec3f("viewPos", Game::getCamera().getPosition());
     water->draw(shader);
 }
 
-static void drawTerrain(Shader& shader)
+static void drawTerrain(Shader& shader, Texture& texture)//, Texture& texture)
 {
+
     shader.bind();
+    texture.bind();
     shader.setMatrix4f("u_projectionMatrix", Game::getCamera().getProjection());
     shader.setMatrix4f("u_modelViewMatrix", Game::getCamera().getView());
     water->draw(shader);
+    texture.unbind();
 }
 void Scene::render()
 {
     drawWater(*waterShader);
-    //drawTerrain(*terrainShader);
+    drawTerrain(*terrainShader, *heightMap);//, *heightMap);
 }
 
