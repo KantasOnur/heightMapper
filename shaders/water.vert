@@ -41,38 +41,34 @@ vec3 wave()
     float dfdx = 0.0f;
     float dfdz = 0.0f;
 
-    float amplitude = 0.82;
-    float frequency = 1.12;
+    float amplitude = 0.7;
+    float frequency = 1.3;
 
     float y_displacement = 0.0f;
     vec2 direction = normalize(vec2(0, -1));
 
-    for (int i = 0; i < 32; i++)
+    for (int i = 0; i < 10; i++)
     {
         float new_amplitude = 0.2 * pow(amplitude, i);
         float new_frequency = pow(frequency, i);
-        vec2 posXZ = vec2(inPos.xz) - 2.0 * vec2(dfdx, dfdz);
+        vec2 posXZ = vec2(inPos.xz) - 1* vec2(dfdz, dfdz);
         float inside_sin = new_frequency * dot(direction, posXZ) + u_time * o[i % 4];
 
         y_displacement += min(max(exp(new_amplitude * sin(inside_sin)) - 1.0, 0.0), 1.5);
 
-        // Avoid if statements for GPU performance.
         float cos_term = new_amplitude * cos(inside_sin) * new_frequency;
         dfdx += cos_term * direction.x * (y_displacement + 1.0);
         dfdz += cos_term * direction.y * (y_displacement + 1.0);
 
 
-        direction = normalize(rotate(direction,0.125*pi));
+        direction = normalize(rotate(direction,0.125*pi) - direction);
     }
     return vec3(dfdx, y_displacement, dfdz);
 }
 
 void main()
 {
-    vec3 wave = wave(); // Assume wave() returns vec3(dfdx, y_displacement, dfdz)
-    // Cross product to get the normal vector
-    //vec3 normal = normalize(cross(tangent1, tangent2));
-
+    vec3 wave = wave();
     vec3 position = vec3(inPos.x, wave.y, inPos.z);
 
     fragNormal = normalize(cross(vec3(0, wave.z, 1.0f), vec3(1.0f, wave.x, 0.0f)));

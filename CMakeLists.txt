@@ -28,6 +28,8 @@ add_executable(heightMapper src/main.cpp
         src/Core/stb.cpp
         src/Core/Texture.cpp
         src/Core/Texture.h
+        dependencies/include/fastNoise/FastNoise.cpp
+        dependencies/include/fastNoise/FastNoise.h
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/include)

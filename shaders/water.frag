@@ -40,5 +40,6 @@ void main()
 
     vec3 result = (ambient + scatteredLight + specular) * objectColor;
     color = vec4(result, 1.0f);
+
 }
 
