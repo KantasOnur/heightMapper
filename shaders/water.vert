@@ -2,37 +2,32 @@
 
 layout (location = 0) in vec3 inPos;
 layout (location = 1) in vec3 inColor;
+layout (location = 2) in vec2 inTextureCoord;
 
 uniform mat4 u_projectionMatrix;
 uniform mat4 u_modelViewMatrix;
 uniform float u_time;
+uniform sampler2D tex0;
 
-out vec3 fragNormal;
 out vec3 fragPos;
-out vec3 objectColor;
-
-const int NUM_WAVES = 1;
+out vec3 fragColor;
+out vec2 fragTextureCoord;
+flat out vec3 fragNormal;
 
 #define pi 3.141592653589793
 
-// Rotate a vec2
+
+float getHeight(vec2 tCoord)
+{
+    return 8*(pow(texture(tex0, tCoord).r, 4.5));
+}
+
 vec2 rotate(vec2 vec, float rot)
 {
     float s = sin(rot), c = cos(rot);
     return vec2(vec.x*c-vec.y*s, vec.x*s+vec.y*c);
 }
-vec2 randomVector(vec2 pos)
-{
-    pos = pos + 0.1;
-    float x = dot(pos, vec2(123.4, 234.5));
-    float y = dot(pos, vec2(234.5, 345.6));
-    vec2 vector = vec2(x,y);
-    vector = sin(vector);
-    vector = vector * 43758.5453;
-    vector = sin(vector);
-    return vector;
-}
-/*vec3(tangent at x, y displacement, tangent at z)*/
+
 vec3 wave()
 {
 
@@ -68,12 +63,18 @@ vec3 wave()
 
 void main()
 {
-    vec3 wave = wave();
-    vec3 position = vec3(inPos.x, wave.y, inPos.z);
+    float height = -getHeight(inTextureCoord);
+    float adjustedHeight = -height * step(-0.2, height);
+    vec3 position = inPos + vec3(0, adjustedHeight, 0);
 
-    fragNormal = normalize(cross(vec3(0, wave.z, 1.0f), vec3(1.0f, wave.x, 0.0f)));
-    fragPos = position;
-    objectColor = inColor;
+    vec3 wave = wave();
+
+    float stepResult = step(0.001, position.y);
+    position.y += wave.y * stepResult;
 
     gl_Position = u_projectionMatrix * u_modelViewMatrix * vec4(position, 1.0f);
+    fragColor = inColor;
+    fragTextureCoord = inTextureCoord;
+    fragPos = position;
+    fragNormal = normalize(cross(vec3(0, wave.z, 1.0f), vec3(1.0f, wave.x, 0.0f)));
 }

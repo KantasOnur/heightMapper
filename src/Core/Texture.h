@@ -6,10 +6,13 @@ class Texture
 {
 private:
     unsigned int id_;
+    unsigned int width_;
+    unsigned int height_;
 public:
-    Texture(const char* filename, const std::unique_ptr<Shader>& shader);
+    Texture(const std::vector<unsigned char>& textureData, const int& width, const int& height);
     ~Texture();
 
+    void updateTexture(const std::vector<unsigned char>& textureData);
     void bind();
     void unbind();
 };

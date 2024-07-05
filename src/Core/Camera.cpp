@@ -3,6 +3,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <complex>
 #include "../Game.h"
+
 Camera::Camera(float fov, glm::vec3 position, glm::vec3 up, glm::vec3 initialLookDir)
     : position_(position), up_(up), front_(initialLookDir),
     yaw_(glm::degrees(atan2(initialLookDir.z, initialLookDir.x))),
@@ -52,7 +53,7 @@ void Camera::updatePosition(Input &input, float dt)
 
 void Camera::updateLookDir(Input &input, float dt)
 {
-    initialClick = input.isMouseClicked(GLFW_MOUSE_BUTTON_LEFT) ? true : initialClick;
+    initialClick = input.isKeyPressed(GLFW_KEY_TAB) ? true : initialClick;
     if(initialClick)
     {
         GLFWwindow* windowPtr = Game::getWindow().getPtr();
@@ -76,9 +77,14 @@ void Camera::updateLookDir(Input &input, float dt)
         front_ = glm::normalize(front);
         glfwSetCursorPos(windowPtr, params.width/2, params.height/2);
         glfwSetInputMode(windowPtr, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+
+        Game::openGui = false;
     }
     else
+    {
         glfwSetInputMode(Game::getWindow().getPtr(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        Game::openGui = true;
+    }
 }
 
 void Camera::update(float dt)

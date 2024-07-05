@@ -1,17 +1,15 @@
 #version 330 core
 
-in vec3 fragNormal; //already normalized
+in vec3 fragColor;
+in vec2 fragTextureCoord;
+flat in vec3 fragNormal;
 in vec3 fragPos;
-in vec3 objectColor;
 
 out vec4 color;
-
 uniform vec3 lightPos;
 uniform vec3 viewPos;
-
 void main()
 {
-
     float ambientStrength = 0.5;
     float specularStrength = 2.0;
 
@@ -38,8 +36,6 @@ void main()
     vec3 scatteredLight = scatterAttenuation * exitDirection;
 
 
-    vec3 result = (ambient + scatteredLight + specular) * objectColor;
+    vec3 result = (ambient + scatteredLight + specular) * fragColor;
     color = vec4(result, 1.0f);
-
 }
-
