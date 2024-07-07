@@ -1,12 +1,12 @@
 #include "Game.h"
+#include "Core/Gui.h"
 
 std::unique_ptr<Window> Game::window_;
 std::unique_ptr<Scene> Game::scene_;
 //std::unique_ptr<EventManager> Game::manager_;
 std::unique_ptr<Input> Game::input_;
 std::unique_ptr<Camera> Game::camera_;
-std::unique_ptr<ImGuiIO> Game::gui_;
-
+std::unique_ptr<Gui> Game::gui_;
 bool Game::openGui = true;
 
 Game::Game()
@@ -16,14 +16,7 @@ Game::Game()
     //manager_ = std::make_unique<EventManager>();
     input_ = std::make_unique<Input>();
     camera_ = std::make_unique<Camera>();
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    gui_ = std::make_unique<ImGuiIO>(ImGui::GetIO());
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplGlfw_InitForOpenGL(window_->getPtr(), true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+    gui_ = std::make_unique<Gui>(window_->getPtr());
 }
 
 void Game::run()
@@ -36,6 +29,7 @@ void Game::run()
     glDepthFunc(GL_LESS);
     while(window_->isOpen())
     {
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         camera_->update(window_->getDeltaTime());
         scene_->render();

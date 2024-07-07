@@ -4,23 +4,15 @@
 #include <iostream>
 #include "Core/Mesh.h"
 #include "Core/Texture.h"
-
+#include "Core/Gui.h"
 #include "Game.h"
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtc/noise.hpp>
+
 #include <fastNoise/FastNoise.h>
+#include <random>
 
 using namespace glm;
-
-struct Noise
-{
-    int count;
-    float frequency;
-    float amplitude;
-    int lacunarity;
-    int seed;
-};
-
-std::unique_ptr<Noise> noiseParams;
 
 std::unique_ptr<Mesh> water;
 std::unique_ptr<Mesh> terrain;
@@ -29,33 +21,61 @@ std::unique_ptr<Texture> heightMap;
 std::unique_ptr<Shader> waterShader;
 std::unique_ptr<Shader> terrainShader;
 
+float inverseLerp(float a, float b, float value)
+{
+    if (a != b)
+    {
+        return std::clamp((value - a) / (b - a), 0.0f, 1.0f);
+    }
+    else
+    {
+        return 0.0f; // or any appropriate value when a == b
+    }
+}
 
-std::vector<unsigned char> generateNoise(const std::unique_ptr<Noise>& noiseParams)
+std::vector<unsigned char> generateNoise(const noiseParams& params)
 {
 
     FastNoise noise;
     noise.SetNoiseType(FastNoise::PerlinFractal);
-    noise.SetSeed(noiseParams->seed);
-    noise.SetFractalOctaves(noiseParams->count);
-    noise.SetFractalLacunarity(noiseParams->lacunarity);
-    noise.SetFrequency(noiseParams->frequency);
-    noise.SetFractalGain(noiseParams->amplitude);
+    noise.SetFractalType(FastNoise::FBM);
 
-    std::vector<unsigned char> noiseData(512 * 512);
+    noise.SetFractalOctaves(params.octaves);
+    noise.SetFractalGain(params.persistance);
+    noise.SetFractalLacunarity(params.lacunarity);
+    noise.SetSeed(params.seed);
+
+    float min = 0.0f;
+    float max = 0.0f;
+    std::vector<unsigned char> noiseMap(512 * 512);
+    std::vector<float> perlinValues(512 * 512);
     int index = 0;
-    for (int y = 0; y < 512; y++)
+    for(int y = 0; y < 512; y++)
     {
-        for (int x = 0; x < 512; x++)
+        for(int x = 0; x < 512; x++)
         {
+            float perlinValue = noise.GetNoise(x/params.scale, y/params.scale);
+            if(perlinValue < min)
+                min = perlinValue;
+            if(perlinValue > max)
+                max = perlinValue;
+            perlinValues[index] = perlinValue;
+            index++;
 
-            float noiseValue = (noise.GetNoise((float)x, (float)y) + 1) * 0.5;
-            float normalizedValue = noiseValue * 255.0f;
-            unsigned char noiseByte = static_cast<unsigned char>(normalizedValue);
-            noiseData[index++] = noiseByte;
         }
     }
-    return noiseData;
 
+    index = 0;
+    for(int y = 0; y < 512; y++)
+    {
+        for(int x = 0; x < 512; x++)
+        {
+            noiseMap[index] = inverseLerp(min, max, perlinValues[index]) * 255;
+            index++;
+        }
+    }
+
+    return noiseMap;
 }
 std::vector<Vertex> generatePlaneVertices(int div, float width) {
     std::vector<Vertex> vertices;
@@ -95,33 +115,16 @@ std::vector<Index> generatePlaneIndices(int div)
 
 Scene::Scene()
 {
-
-    noiseParams = std::make_unique<Noise>();
-    noiseParams->count = 0;
-    noiseParams->frequency = 0.0f;
-    noiseParams->amplitude = 0.0f;
-
-
-    std::vector<Vertex> terrainVertices = generatePlaneVertices(1024, 3);
-    std::vector<Index> terrainIndices = generatePlaneIndices(1024);
+    std::vector<Vertex> terrainVertices = generatePlaneVertices(2048, 5);
+    std::vector<Index> terrainIndices = generatePlaneIndices(2048);
     terrain = std::make_unique<Mesh>(terrainVertices, terrainIndices);
     terrainShader = std::make_unique<Shader>("../shaders/terrain.vert", "../shaders/terrain.frag");
 
-    std::vector<unsigned char> noise = generateNoise(noiseParams);
-    heightMap = std::make_unique<Texture>(noise, 512, 512);
+    heightMap = std::make_unique<Texture>(std::vector<unsigned char>() , 512, 512);
+
     terrainShader->bind();
-    terrainShader->setFloat1f("triangleSide", 3.0f/1024.0f);
-    terrainShader->setFloat1f("stepSize", 1.0f/1024.0f);
     terrainShader->setInt("tex0", 0);
     terrainShader->unbind();
-
-    std::vector<Vertex> waterVertices = generatePlaneVertices(1000, 10);
-    std::vector<Index> waterIndices = generatePlaneIndices(1000);
-    water = std::make_unique<Mesh>(terrainVertices, terrainIndices);
-    waterShader = std::make_unique<Shader>("../shaders/water.vert", "../shaders/water.frag");
-    waterShader->bind();
-    waterShader->setInt("tex0", 0);
-    waterShader->unbind();
 }
 
 
@@ -154,33 +157,17 @@ void drawTerrain(Shader& shader)
 }
 void Scene::render()
 {
-    if (Game::openGui)
+    Game::getGui().beginFrame();
+    auto updated = Game::getGui().noiseParamsUpdated();
+    if(updated.isUpdated)
     {
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        ImGuiIO& gui = Game::getGui();
-        ImGui::Begin("Noise Parameters");
-
-        ImGui::SliderInt("Noise count", &noiseParams->count, 0, 20);
-        ImGui::SliderFloat("Noise frequency", &noiseParams->frequency, 0.0f, 0.5f);
-        ImGui::SliderFloat("Noise amplitude", &noiseParams->amplitude, 0.0f, 1.0f);
-        ImGui::SliderInt("Noise lacunarity", &noiseParams->lacunarity,0 ,10);
-        ImGui::SliderInt("Noise Seed", &noiseParams->seed, 0, 3000);
-        heightMap->updateTexture(generateNoise(noiseParams));
+        heightMap->updateTexture(generateNoise(updated.recentParams));
     }
-
 
 
     //drawWater(*waterShader);
     drawTerrain(*terrainShader);
 
-    if(Game::openGui)
-    {
-        ImGui::End();
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    }
+    Game::getGui().endFrame();
 }
 

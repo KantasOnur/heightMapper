@@ -39,6 +39,8 @@ add_executable(heightMapper
         dependencies/include/ImGui/imgui_impl_opengl3.cpp
         dependencies/include/ImGui/imgui_impl_glfw.cpp
         dependencies/include/ImGui/imgui_impl_opengl3_loader.h
+        src/Core/Gui.cpp
+        src/Core/Gui.h
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/include)

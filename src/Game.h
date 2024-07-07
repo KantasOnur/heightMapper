@@ -5,11 +5,9 @@
 #include "Core/Window.h"
 #include "Core/Input.h"
 #include "Core/Camera.h"
-#include "Events/EventManager.h"
+#include "Core/Gui.h"
 #include "Scene.h"
-#include <ImGui/imgui.h>
-#include <imGui/imgui_impl_glfw.h>
-#include <ImGui/imgui_impl_opengl3.h>
+
 
 class Game
 {
@@ -20,7 +18,7 @@ private:
     //static std::unique_ptr<EventManager> manager_;
     static std::unique_ptr<Input> input_;
     static std::unique_ptr<Camera> camera_;
-    static std::unique_ptr<ImGuiIO> gui_;
+    static std::unique_ptr<Gui> gui_;
 public:
 
     Game();
@@ -30,7 +28,7 @@ public:
     //static EventManager& getManager() {return *manager_;}
     static Input& getInput() {return *input_;}
     static Camera& getCamera() {return *camera_;}
-    static ImGuiIO& getGui() {return *gui_;}
+    static Gui& getGui() {return *gui_;}
 
     static bool openGui;
 
