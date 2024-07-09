@@ -26,20 +26,16 @@ vec3 calculateNormal(sampler2D heightMap, vec2 coords)
     float heightU = texture(heightMap, coords + vec2(0.0, 1.0) / 512).r;
     float heightD = texture(heightMap, coords + vec2(0.0, -1.0) / 512).r;
 
-    vec3 tangentX = normalize(vec3(2.0 / 512, 0.0, (heightL - heightR)));
-    vec3 tangentY = normalize(vec3(0.0, 2.0 / 512, (heightU - heightD)));
-
-    /*trial and error*/
     vec3 tangent = normalize(vec3(2.0/512, heightR - heightL, 0.0));
-    vec3 bitangent = normalize(vec3(0.0, heightD - heightU, 2.0/512));
-    vec3 normal = normalize(cross(bitangent, tangent));
+    vec3 bitangent = normalize(vec3(0.0, heightU - heightD, -2.0/512));
+    vec3 normal = normalize(cross(tangent, bitangent));
     return normal;
 }
 
 void main()
 {
 
-    objectColor = inColor;
+    objectColor = vec3(0.0f, texture(tex0, aTex).g, 0.0f);
     vec3 position = inPos+vec3(0, texture(tex0, aTex).r, 0);
     gl_Position = u_projectionMatrix * u_modelViewMatrix * vec4(position, 1.0f);
     texCoord = aTex;

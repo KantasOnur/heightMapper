@@ -8,7 +8,7 @@
 #include "Game.h"
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/noise.hpp>
-
+#include "Erosion/Erosion.h"
 #include <fastNoise/FastNoise.h>
 #include <random>
 
@@ -16,10 +16,11 @@ using namespace glm;
 
 std::unique_ptr<Mesh> water;
 std::unique_ptr<Mesh> terrain;
-std::unique_ptr<Texture> heightMap;
+std::unique_ptr<Texture> map;
 
 std::unique_ptr<Shader> waterShader;
 std::unique_ptr<Shader> terrainShader;
+
 
 float inverseLerp(float a, float b, float value)
 {
@@ -70,7 +71,7 @@ std::vector<unsigned char> generateNoise(const noiseParams& params)
     {
         for(int x = 0; x < 512; x++)
         {
-            noiseMap[index] = inverseLerp(min, max, perlinValues[index]) * 255;
+            noiseMap[y * 512 + x] = inverseLerp(min, max, perlinValues[index]) * 255;
             index++;
         }
     }
@@ -120,7 +121,7 @@ Scene::Scene()
     terrain = std::make_unique<Mesh>(terrainVertices, terrainIndices);
     terrainShader = std::make_unique<Shader>("../shaders/terrain.vert", "../shaders/terrain.frag");
 
-    heightMap = std::make_unique<Texture>(std::vector<unsigned char>() , 512, 512);
+    map = std::make_unique<Texture>(512, 512);
 
     terrainShader->bind();
     terrainShader->setInt("tex0", 0);
@@ -132,27 +133,27 @@ Scene::Scene()
 static void drawWater(Shader& shader)
 {
     shader.bind();
-    heightMap->bind();
+    map->bind();
     shader.setMatrix4f("u_projectionMatrix", Game::getCamera().getProjection());
     shader.setMatrix4f("u_modelViewMatrix", Game::getCamera().getView());
     shader.setFloat1f("u_time", Game::getWindow().getTime());
     shader.setVec3f("lightPos", Game::getCamera().getPosition());
     shader.setVec3f("viewPos", Game::getCamera().getPosition());
     water->draw(shader);
-    heightMap->unbind();
+    map->unbind();
 
 }
 
 void drawTerrain(Shader& shader)
 {
     shader.bind();
-    heightMap->bind();
+    map->bind();
     shader.setVec3f("lightPos", Game::getCamera().getPosition());
     shader.setVec3f("viewPos", Game::getCamera().getPosition());
     shader.setMatrix4f("u_projectionMatrix", Game::getCamera().getProjection());
     shader.setMatrix4f("u_modelViewMatrix", Game::getCamera().getView());
     terrain->draw(shader);
-    heightMap->unbind();
+    map->unbind();
 
 }
 void Scene::render()
@@ -161,13 +162,11 @@ void Scene::render()
     auto updated = Game::getGui().noiseParamsUpdated();
     if(updated.isUpdated)
     {
-        heightMap->updateTexture(generateNoise(updated.recentParams));
+        map->updateTexture(generateNoise(updated.recentParams));
     }
 
-
-    //drawWater(*waterShader);
+    Erosion::Erode(map->getMap(), 512);
     drawTerrain(*terrainShader);
-
     Game::getGui().endFrame();
 }
 

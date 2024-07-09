@@ -41,6 +41,8 @@ add_executable(heightMapper
         dependencies/include/ImGui/imgui_impl_opengl3_loader.h
         src/Core/Gui.cpp
         src/Core/Gui.h
+        src/Erosion/Erosion.cpp
+        src/Erosion/Erosion.h
 )
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/dependencies/include)
