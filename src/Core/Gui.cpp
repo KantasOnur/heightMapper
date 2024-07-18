@@ -16,6 +16,8 @@ Gui::Gui(GLFWwindow* window)
     noiseParamsPtr->lacunarity = 1.0f;
     noiseParamsPtr->persistance = 0.0f;
     noiseParamsPtr->scale = 1.0f;
+
+    isErosionEnabled = false;
 }
 
 Gui::~Gui()
@@ -79,4 +81,13 @@ boolParams Gui::noiseParamsUpdated()
         return {true, updatedParams};
     }
     return {false, updatedParams};
+}
+
+bool Gui::toggleErode()
+{
+    if(Game::openGui)
+    {
+        ImGui::Checkbox("Toggle Erosion", &isErosionEnabled);
+    }
+    return isErosionEnabled;
 }

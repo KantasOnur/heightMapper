@@ -20,7 +20,7 @@ std::unique_ptr<Texture> map;
 
 std::unique_ptr<Shader> waterShader;
 std::unique_ptr<Shader> terrainShader;
-
+int iteration = 0;
 
 float inverseLerp(float a, float b, float value)
 {
@@ -62,7 +62,6 @@ std::vector<unsigned char> generateNoise(const noiseParams& params)
                 max = perlinValue;
             perlinValues[index] = perlinValue;
             index++;
-
         }
     }
 
@@ -156,16 +155,57 @@ void drawTerrain(Shader& shader)
     map->unbind();
 
 }
+
+heightMap formatErodedMap(const perlinMap& erodedMap)
+{
+    std::vector<unsigned char> noiseMap(512 * 512);
+    float min = 0.0f;
+    float max = 0.0f;
+
+    for(int y = 0; y < 512; y++)
+    {
+        for(int x = 0; x < 512; x++)
+        {
+            float perlinValue = erodedMap[y * 512 + x];
+            if(perlinValue < min)
+                min = perlinValue;
+            if(perlinValue > max)
+                max = perlinValue;
+        }
+    }
+
+    int index = 0;
+    for(int y = 0; y < 512; y++)
+    {
+        for(int x = 0; x < 512; x++)
+        {
+            noiseMap[y * 512 + x] = inverseLerp(min, max, erodedMap[index]) * 255;
+            index++;
+        }
+    }
+
+    return noiseMap;
+}
+
 void Scene::render()
 {
     Game::getGui().beginFrame();
+
     auto updated = Game::getGui().noiseParamsUpdated();
     if(updated.isUpdated)
     {
         map->updateTexture(generateNoise(updated.recentParams));
     }
 
-    Erosion::Erode(map->getMap(), 512);
+    if(Game::getGui().toggleErode())
+    {
+        perlinMap erodedMap = Erosion::Erode(map->getMap(), 512);
+        map->updateTexture(formatErodedMap(erodedMap));
+        iteration++;
+        //std::cout << iteration << std::endl;
+    }
+
+
     drawTerrain(*terrainShader);
     Game::getGui().endFrame();
 }

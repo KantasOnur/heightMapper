@@ -23,12 +23,15 @@ class Gui
 {
 private:
     std::unique_ptr<noiseParams> noiseParamsPtr;
+    bool isErosionEnabled;
 public:
     Gui(GLFWwindow* window);
     ~Gui();
     void beginFrame();
-    const noiseParams getNoiseParams();
     void endFrame();
+
+    const noiseParams getNoiseParams();
+    bool toggleErode();
     boolParams noiseParamsUpdated();
 };
 #endif //GUI_H

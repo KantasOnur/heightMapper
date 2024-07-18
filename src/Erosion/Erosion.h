@@ -6,19 +6,41 @@
 
 struct Particle
 {
-    glm::vec2 position;
-    glm::vec2 direction;
-    float velocity;
-    float waterAmount;
-    float sedimentAmount;
+    Particle(const glm::vec2& position) {pos = position;}
+    glm::vec2 pos;
+    glm::vec2 dir = glm::vec2(0.0f); // Normalized
+    float vel = 1.0f; // Speed
+    float water = 1.0f;
+    float sediment = 0.0f;
 };
 
+struct uvCoords
+{
+    float u;
+    float v;
+};
+
+struct heightAndGradient
+{
+    float height;
+    glm::vec2 gradient;
+};
+
+struct Params
+{
+    float intertia = 0.7;
+    float minSlope = 0.0001f;
+    float capacity = 0.5f;
+    float deposition = 0.3f; // Percentage of sediment surplus dropped.
+    float erosion = 0.3f; // Percenteage of remaining capacity used for erosion.
+};
 using heightMap = std::vector<unsigned char>;
+using perlinMap = std::vector<float>;
 using namespace glm;
 class Erosion
 {
 public:
-    void static Erode(const heightMap& map, const int& mapSize);
+    perlinMap static Erode(heightMap map, const int& mapSize);
 };
 
 

@@ -62,7 +62,7 @@ void Camera::updateLookDir(Input &input, float dt)
         windowParams params = Game::getWindow().getParams();
         glm::vec2 deltaPos = mousePos - glm::vec2(params.width/2, params.height/2);
 
-        float speed = 10.0f * dt;
+        float speed = 0.1f;
         yaw_ += speed * deltaPos.x/2;
         pitch_ -= speed * deltaPos.y/2;
 

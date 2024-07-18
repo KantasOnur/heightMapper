@@ -3,18 +3,8 @@
 #include <iostream>
 #include <random>
 #include <glm/ext/quaternion_common.hpp>
-#include <glm/ext/quaternion_geometric.hpp>
-
-const float kInertia = .04f;
-const float kMinSlope = 0.01f;
-const float kSedimentCapacity = 2.0f;
-const float kDeposition = 0.1f;
-const float kErosion = 0.9f;
-const float kGravity = -4;
-const float kEvaporation = 0.05f;
 
 std::default_random_engine generator;
-
 
 float InverseLerp(float a, float b, float value)
 {
@@ -25,77 +15,107 @@ float InverseLerp(float a, float b, float value)
         return 0.0f; // or any appropriate value when a == b
 }
 
+perlinMap translateToPerlinMap(const heightMap& map, const int& mapSize)
+{
+    perlinMap perlinValues(mapSize * mapSize);
+    for(int y = 0; y < mapSize; ++y)
+    {
+        for(int x = 0; x < mapSize; ++x)
+        {
+            perlinValues[y*mapSize + x] = InverseLerp(0, 255, map[y*mapSize + x]);
+        }
+    }
+    return perlinValues;
+}
+
 vec2 getRandomPosition(int mapSize)
 {
-    std::uniform_int_distribution<int> distribution(0,mapSize-1);
+    std::uniform_int_distribution<int> distribution(1,mapSize-2);
     return {distribution(generator), distribution(generator)};
-}
-
-float getHeight(const heightMap& map, const int& mapSize, const vec2& position)
-{
-    return InverseLerp(0.0f, 255.0f, map[position.y * mapSize + position.x]);
-}
-vec2 calculateGradient(const vec2& dropletPosition, const heightMap& map, const int& mapSize, const vec2& uvCoords)
-{
-    unsigned char p0 = map[dropletPosition.y * mapSize + dropletPosition.x]; // Px,y
-    unsigned char p1 = map[(dropletPosition.y * mapSize) + dropletPosition.x + 1]; // Px+1,y
-    unsigned char p2 = map[(dropletPosition.y + 1) * mapSize + dropletPosition.x]; // Px,y+1
-    unsigned char p3 = map[(dropletPosition.y + 1) * mapSize + (dropletPosition.x + 1)]; //Px+1,y+1
-
-    float gradientX = (p1 - p0)*(1-uvCoords.y)+(p3 - p2)*uvCoords.y;
-    float gradientY = (p2 - p0)*(1-uvCoords.x)+(p3 - p1)*uvCoords.x;
-
-    return {gradientX, gradientY};
 }
 
 bool isOutOfTheMap(const vec2& position, const int& mapSize)
 {
-    return position.x < 0 || position.x > mapSize - 1 || position.y < 0 || position.y > mapSize -1;
+    return position.x <= 0 || position.x >= mapSize - 1 || position.y <= 0 || position.y >= mapSize -1;
 }
-void Erosion::Erode(const heightMap& map, const int& mapSize)
+
+heightAndGradient calculateHeightAndGradient(const perlinMap& map, const vec2& position, const uvCoords& cellOffset, const int& mapSize)
 {
-    // Generate a random droplet
-    Particle droplet = {getRandomPosition(mapSize), {0,0}, 1.0f, 1.0f, 0.0f};
-    // Droplet's uv coordinates on the height map
+    /* Since our cell is a unit square we can simplify the calculation to:
+     *
+     * bilinear interpolation: f(x,y) = (1−x)*(1−y)*f00 + x*(1−y)*f10 + (1−x)*y*f01 + x*y*f11
+     * gradient vector(f(x,y)) = vec2(d/dx, d/dy)
+     */
 
-    float u = InverseLerp(0, mapSize-1, droplet.position.x);
-    float v = InverseLerp(0, mapSize-1, droplet.position.y);
+    float x = cellOffset.u;
+    float y = cellOffset.v;
 
-    int dropletHeightMapIndex = droplet.position.y * mapSize + droplet.position.x;
+    float f00 = map[position.y * mapSize + position.x];
+    float f10 = map[position.y * mapSize + (position.x+1)];
+    float f01 = map[(position.y+1)*mapSize + position.x];
+    float f11 = map[(position.y+1)*mapSize + (position.x+1)];
 
-    for(int liftetime = 0; liftetime < 30 && !isOutOfTheMap(droplet.position, mapSize); liftetime++)
+    vec2 gradient = vec2((f10-f00)*(1-y) + (f11-f01)*y, (f01-f00)*(1-x) + (f11-f10)*x);
+    float height = (1-x)*(1-y)*f00 + x*(1-y)*f10 + (1-x)*y*f01 + x*y*f11;
+    return {height, gradient};
+}
+
+void deposit(const vec2& position, heightMap& map, const int& mapSize, const float& amount)
+{
+    int ix = (int) position.x;
+    int iy = (int) position.y;
+    double u = position.x - ix;
+    double v = position.y - iy;
+    map[iy*mapSize + ix] += amount * (1 - u) * (1 - v);
+    map[iy*mapSize + (ix+1)] += amount * u * (1 - v);
+    map[(iy+1)*mapSize + ix] += amount * (1 - u) * v;
+    map[(iy+1)*mapSize + (ix+1)] += amount * u * v;
+
+}
+
+perlinMap Erosion::Erode(heightMap map, const int& mapSize)
+{
+    /*
+     * Goal: the drop is moved for each iteration of its lifetime from current position, posOld.
+     */
+
+    Particle particle(getRandomPosition(mapSize));
+    perlinMap perlinValues = translateToPerlinMap(map, mapSize);
+    Params params;
+    for(int i = 0; i < 30; ++i)
     {
-        vec2 gradientVector = calculateGradient(droplet.position, map, mapSize, {u, v});
-        droplet.direction = droplet.direction * kInertia - gradientVector * (1 - kInertia);
-        if(length(droplet.direction) == 0)
-            break; // Flat ground no need to erode.
+        uvCoords cellOffsetOld = {(int)particle.pos.x - particle.pos.x, (int)particle.pos.y-particle.pos.y};
+        vec2 posOld = particle.pos;
+        heightAndGradient hg = calculateHeightAndGradient(perlinValues, posOld, cellOffsetOld, mapSize);
+        float heightOld = hg.height;
 
-        float heightOld = getHeight(map, mapSize, droplet.position);
-        droplet.direction = normalize(droplet.direction);
-        droplet.position += droplet.direction;
-        float heightNew = getHeight(map, mapSize, droplet.position);
+        particle.dir = particle.dir*params.intertia - hg.gradient*(1-params.intertia);
+        if(length(particle.dir)== 0)
+            break;
+        particle.dir = normalize(particle.dir);
+        particle.pos += particle.dir;
+
+        if(isOutOfTheMap(particle.pos, mapSize))
+            break;
+
+        uvCoords cellOffsetNew = {(int)particle.pos.x - particle.pos.x, (int)particle.pos.y-particle.pos.y};
+        float heightNew = calculateHeightAndGradient(perlinValues, posOld, cellOffsetNew, mapSize).height;
 
         float heightDiff = heightNew - heightOld;
+        float capacity = max(-heightDiff, params.minSlope)*particle.vel*particle.water*params.capacity;
 
-        float carriedSediment = max(-heightDiff, kMinSlope) * droplet.velocity * droplet.waterAmount * kSedimentCapacity;
-        if(carriedSediment >= kSedimentCapacity || heightDiff > 0)
+        if(particle.sediment > capacity)
         {
-            float depositAmount = (droplet.sedimentAmount - carriedSediment) * kDeposition;
-            droplet.sedimentAmount -= depositAmount;
-            //std::cout << "deposit amount " << depositAmount << std::endl;
+            float amount = (particle.sediment-capacity)*params.deposition;
+            std::cout << capacity << std::endl;
+            particle.sediment -= amount;
+            deposit(posOld, map, mapSize, amount);
         }
         else
         {
-            // erode the terrain
-            float erosionAmount = min((carriedSediment - droplet.sedimentAmount)*kErosion, -heightDiff);
-            //std::cout << "erosion amount "<< carriedSediment << std::endl;
+            //erode();
         }
-
-        droplet.velocity = sqrt(abs((droplet.velocity * droplet.velocity)+(heightDiff*kGravity)));
-        std::cout << droplet.velocity << std::endl;
-        droplet.waterAmount *= (1-kEvaporation);
-
     }
 
-
+    return perlinValues;
 }
