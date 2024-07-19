@@ -47,24 +47,23 @@ heightAndGradient calculateHeightAndGradient(const perlinMap& map, const vec2& p
      * gradient vector(f(x,y)) = vec2(d/dx, d/dy)
      */
 
+    int ix = (int)position.x;
+    int iy = (int)position.y;
+
+
     float x = position.x-(int)position.x;
     float y = position.y-(int)position.y;
 
-    float f00 = map[position.y * mapSize + position.x];
-    float f10 = map[position.y * mapSize + (position.x+1)];
-    float f01 = map[(position.y+1)*mapSize + position.x];
-    float f11 = map[(position.y+1)*mapSize + (position.x+1)];
+    float f00 = map[iy * mapSize + ix];
+    float f10 = map[iy * mapSize + (ix+1)];
+    float f01 = map[(iy+1)*mapSize + ix];
+    float f11 = map[(iy+1)*mapSize + (ix+1)];
 
     vec2 gradient = vec2((f10-f00)*(1-y) + (f11-f01)*y, (f01-f00)*(1-x) + (f11-f10)*x);
     float height = (1-x)*(1-y)*f00 + x*(1-y)*f10 + (1-x)*y*f01 + x*y*f11;
     return {height, gradient};
 }
 
-void deposit(const vec2& position, heightMap& map, const int& mapSize, const float& amount)
-{
-
-
-}
 
 perlinMap Erosion::Erode(heightMap map, const int& mapSize)
 {
@@ -98,12 +97,12 @@ perlinMap Erosion::Erode(heightMap map, const int& mapSize)
         {
             float amount = (heightDiff > 0) ? fmin(particle.sediment, heightDiff) : (particle.sediment - capacity) * params.deposition;
             particle.sediment -= amount;
-            float cellOffsetX = posOld.x - (int)posOld.x;
-            float cellOffsetY = posOld.y - (int)posOld.y;
-            perlinValues[posOld.y*mapSize+posOld.x] += amount * (1 - cellOffsetX) * (1 - cellOffsetY);
-            perlinValues[posOld.y*mapSize + posOld.x+ 1] += amount * cellOffsetX * (1 - cellOffsetY);
-            perlinValues[(posOld.y+1)*mapSize + posOld.x] += amount * (1 - cellOffsetX) * cellOffsetY;
-            perlinValues[(posOld.y+1)*mapSize + posOld.x+1] += amount * cellOffsetX * cellOffsetY;
+            float u = posOld.x - (int)posOld.x;
+            float v = posOld.y - (int)posOld.y;
+            perlinValues[(int)posOld.y*mapSize+(int)posOld.x] += amount * (1 - u) * (1 - v);
+            perlinValues[(int)posOld.y*mapSize + (int)posOld.x+ 1] += amount * u * (1 - v);
+            perlinValues[(int)(posOld.y+1)*mapSize + (int)posOld.x] += amount * (1 - u) * v;
+            perlinValues[(int)(posOld.y+1)*mapSize + (int)posOld.x+1] += amount * u * v;
         }
         else
         {
