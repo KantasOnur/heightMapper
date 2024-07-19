@@ -13,6 +13,7 @@
 #include <random>
 
 using namespace glm;
+bool flag = true;
 
 std::unique_ptr<Mesh> water;
 std::unique_ptr<Mesh> terrain;
@@ -48,12 +49,12 @@ std::vector<unsigned char> generateNoise(const noiseParams& params)
 
     float min = 0.0f;
     float max = 0.0f;
-    std::vector<unsigned char> noiseMap(512 * 512);
-    std::vector<float> perlinValues(512 * 512);
+    std::vector<unsigned char> noiseMap(256 * 256);
+    std::vector<float> perlinValues(256 * 256);
     int index = 0;
-    for(int y = 0; y < 512; y++)
+    for(int y = 0; y < 256; y++)
     {
-        for(int x = 0; x < 512; x++)
+        for(int x = 0; x < 256; x++)
         {
             float perlinValue = noise.GetNoise(x/params.scale, y/params.scale);
             if(perlinValue < min)
@@ -66,11 +67,11 @@ std::vector<unsigned char> generateNoise(const noiseParams& params)
     }
 
     index = 0;
-    for(int y = 0; y < 512; y++)
+    for(int y = 0; y < 256; y++)
     {
-        for(int x = 0; x < 512; x++)
+        for(int x = 0; x < 256; x++)
         {
-            noiseMap[y * 512 + x] = inverseLerp(min, max, perlinValues[index]) * 255;
+            noiseMap[y * 256 + x] = inverseLerp(min, max, perlinValues[index]) * 255;
             index++;
         }
     }
@@ -115,12 +116,12 @@ std::vector<Index> generatePlaneIndices(int div)
 
 Scene::Scene()
 {
-    std::vector<Vertex> terrainVertices = generatePlaneVertices(2048, 5);
-    std::vector<Index> terrainIndices = generatePlaneIndices(2048);
+    std::vector<Vertex> terrainVertices = generatePlaneVertices(4000, 3);
+    std::vector<Index> terrainIndices = generatePlaneIndices(4000);
     terrain = std::make_unique<Mesh>(terrainVertices, terrainIndices);
     terrainShader = std::make_unique<Shader>("../shaders/terrain.vert", "../shaders/terrain.frag");
 
-    map = std::make_unique<Texture>(512, 512);
+    map = std::make_unique<Texture>(256, 256);
 
     terrainShader->bind();
     terrainShader->setInt("tex0", 0);
@@ -158,28 +159,14 @@ void drawTerrain(Shader& shader)
 
 heightMap formatErodedMap(const perlinMap& erodedMap)
 {
-    std::vector<unsigned char> noiseMap(512 * 512);
-    float min = 0.0f;
-    float max = 0.0f;
-
-    for(int y = 0; y < 512; y++)
-    {
-        for(int x = 0; x < 512; x++)
-        {
-            float perlinValue = erodedMap[y * 512 + x];
-            if(perlinValue < min)
-                min = perlinValue;
-            if(perlinValue > max)
-                max = perlinValue;
-        }
-    }
+    std::vector<unsigned char> noiseMap(256 * 256);
 
     int index = 0;
-    for(int y = 0; y < 512; y++)
+    for(int y = 0; y < 256; y++)
     {
-        for(int x = 0; x < 512; x++)
+        for(int x = 0; x < 256; x++)
         {
-            noiseMap[y * 512 + x] = inverseLerp(min, max, erodedMap[index]) * 255;
+            noiseMap[y * 256 + x] = max(0.0f, erodedMap[index]) * 255;
             index++;
         }
     }
@@ -199,10 +186,11 @@ void Scene::render()
 
     if(Game::getGui().toggleErode())
     {
-        perlinMap erodedMap = Erosion::Erode(map->getMap(), 512);
+        perlinMap erodedMap = Erosion::Erode(map->getMap(), 256);
         map->updateTexture(formatErodedMap(erodedMap));
         iteration++;
         //std::cout << iteration << std::endl;
+
     }
 
 
