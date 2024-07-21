@@ -91,3 +91,14 @@ bool Gui::toggleErode()
     }
     return isErosionEnabled;
 }
+
+bool Gui::toggleBlur()
+{
+    bool prevState = isBlurEnabled;
+    if(Game::openGui)
+    {
+        ImGui::Checkbox("Apple Blur", &isBlurEnabled);
+    }
+    return !prevState && isBlurEnabled;
+}
+

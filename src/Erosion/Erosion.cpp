@@ -4,6 +4,8 @@
 #include <random>
 #include <glm/ext/quaternion_common.hpp>
 
+const int sedimentCapacityFactor = 4;
+
 std::default_random_engine generator;
 
 float InverseLerp(float a, float b, float value)
@@ -91,11 +93,10 @@ perlinMap Erosion::Erode(heightMap map, const int& mapSize)
 
         float heightNew = calculateHeightAndGradient(perlinValues, particle.pos, mapSize).height;
         float heightDiff = heightNew - heightOld;
-        float capacity = fmax (-heightDiff * particle.vel * particle.water * params.capacity, params.minSediment);
-
-        if(particle.sediment > capacity || heightDiff > 0)
+        float capacity = fmax (-heightDiff, params.minSlope)*particle.vel*particle.water*params.capacity;
+        if(particle.sediment > capacity)
         {
-            float amount = (heightDiff > 0) ? fmin(particle.sediment, heightDiff) : (particle.sediment - capacity) * params.deposition;
+            float amount = (particle.sediment - capacity) * params.deposition;
             particle.sediment -= amount;
             float u = posOld.x - (int)posOld.x;
             float v = posOld.y - (int)posOld.y;

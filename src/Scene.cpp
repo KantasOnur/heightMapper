@@ -116,8 +116,8 @@ std::vector<Index> generatePlaneIndices(int div)
 
 Scene::Scene()
 {
-    std::vector<Vertex> terrainVertices = generatePlaneVertices(4000, 3);
-    std::vector<Index> terrainIndices = generatePlaneIndices(4000);
+    std::vector<Vertex> terrainVertices = generatePlaneVertices(2000, 4);
+    std::vector<Index> terrainIndices = generatePlaneIndices(2000);
     terrain = std::make_unique<Mesh>(terrainVertices, terrainIndices);
     terrainShader = std::make_unique<Shader>("../shaders/terrain.vert", "../shaders/terrain.frag");
 
@@ -174,6 +174,52 @@ heightMap formatErodedMap(const perlinMap& erodedMap)
     return noiseMap;
 }
 
+heightMap blurHeightMap(const heightMap& map, const int& mapSize)
+{
+    heightMap blurredMap(mapSize * mapSize);
+
+    for (int y = 0; y < mapSize; ++y)
+    {
+        for (int x = 0; x < mapSize; ++x)
+        {
+            int targetPixel = y * mapSize + x;
+
+            if (x < 1 || y < 1 || x + 1 == mapSize || y + 1 == mapSize)
+            {
+                blurredMap[targetPixel] = map[targetPixel];
+            }
+            else
+            {
+                int sum = map[(y - 1) * mapSize + (x - 1)] +  // Top left
+                          map[(y - 1) * mapSize + x] +         // Top center
+                          map[(y - 1) * mapSize + (x + 1)] +  // Top right
+                          map[y * mapSize + (x - 1)] +        // Mid left
+                          map[y * mapSize + x] +              // Current pixel
+                          map[y * mapSize + (x + 1)] +        // Mid right
+                          map[(y + 1) * mapSize + (x - 1)] +  // Low left
+                          map[(y + 1) * mapSize + x] +        // Low center
+                          map[(y + 1) * mapSize + (x + 1)];   // Low right
+
+                blurredMap[targetPixel] = static_cast<unsigned char>(sum / 9);
+            }
+        }
+    }
+
+    return blurredMap;
+}
+heightMap mixBlur(const heightMap& map, const int& mapSize)
+{
+    heightMap blurredMap = blurHeightMap(map, mapSize);
+    heightMap mixBlurred(mapSize * mapSize);
+    for(int y = 0; y < mapSize; ++y)
+    {
+        for(int x = 0; x < mapSize; ++x)
+        {
+            mixBlurred[y*mapSize+x] = 0.7*blurredMap[y*mapSize+x]+(1-0.7)*map[y*mapSize+x];
+        }
+    }
+    return mixBlurred;
+}
 void Scene::render()
 {
     Game::getGui().beginFrame();
@@ -184,15 +230,19 @@ void Scene::render()
         map->updateTexture(generateNoise(updated.recentParams));
     }
 
+    bool prevState = Game::getGui().isErosionEnabled;
     if(Game::getGui().toggleErode())
     {
         perlinMap erodedMap = Erosion::Erode(map->getMap(), 256);
         map->updateTexture(formatErodedMap(erodedMap));
         iteration++;
-        //std::cout << iteration << std::endl;
+        std::cout << iteration << std::endl;
 
     }
-
+    else if (prevState && !Game::getGui().isErosionEnabled)
+    {
+        map->updateTexture(mixBlur(map->getMap(), 256));
+    }
 
     drawTerrain(*terrainShader);
     Game::getGui().endFrame();

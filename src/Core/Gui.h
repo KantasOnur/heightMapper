@@ -23,7 +23,7 @@ class Gui
 {
 private:
     std::unique_ptr<noiseParams> noiseParamsPtr;
-    bool isErosionEnabled;
+    bool isBlurEnabled;
 public:
     Gui(GLFWwindow* window);
     ~Gui();
@@ -32,6 +32,9 @@ public:
 
     const noiseParams getNoiseParams();
     bool toggleErode();
+    bool toggleBlur();
+    bool erosionEnded();
     boolParams noiseParamsUpdated();
+    bool isErosionEnabled;
 };
 #endif //GUI_H
