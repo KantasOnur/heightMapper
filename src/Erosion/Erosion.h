@@ -28,15 +28,15 @@ struct heightAndGradient
 
 struct Params
 {
-    float intertia = 0.1f;
+    float intertia = 0.3f;
     float minSlope = 0.0001f;
     float capacity = 4.0f;
     float minSediment = 0.1f;
-    float deposition = 0.3f; // Percentage of sediment surplus dropped.
-    float erosion = 0.3f; // Percenteage of remaining capacity used for erosion.
+    float deposition = 0.9f; // Percentage of sediment surplus dropped.
+    float erosion = 0.1f; // Percenteage of remaining capacity used for erosion.
     float gravity = 4.0f;
-    float evaporation = 0.01f;
-    int radius = 6;
+    float evaporation = 0.1f;
+    int radius = 6.0f;
 };
 using heightMap = std::vector<unsigned char>;
 using perlinMap = std::vector<float>;
@@ -44,7 +44,7 @@ using namespace glm;
 class Erosion
 {
 public:
-    perlinMap static Erode(heightMap map, const int& mapSize);
+    void static Erode(std::vector<float>& map, const int& mapSize);
 };
 
 

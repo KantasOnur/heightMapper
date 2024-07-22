@@ -8,16 +8,15 @@ private:
     unsigned int id_;
     unsigned int width_;
     unsigned int height_;
-    std::vector<unsigned char> map;
+    std::vector<float> map;
 public:
-    Texture(const std::vector<unsigned char>& textureData, const int& width, const int& height);
-    Texture(const int& width, const int& height);
+    Texture(const std::vector<float>& textureData, const int& width, const int& height);
     ~Texture();
 
-    void updateTexture(const std::vector<unsigned char>& textureData);
+    void updateTexture(const std::vector<float>& textureData);
     void bind();
     void unbind();
 
-    std::vector<unsigned char> getMap() {return map;}
+    std::vector<float>& getMap() {return map;}
 };
 #endif //TEXTURE_H

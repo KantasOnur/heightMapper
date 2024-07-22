@@ -4,7 +4,6 @@
 #include <random>
 #include <glm/ext/quaternion_common.hpp>
 
-const int sedimentCapacityFactor = 4;
 
 std::default_random_engine generator;
 
@@ -67,19 +66,18 @@ heightAndGradient calculateHeightAndGradient(const perlinMap& map, const vec2& p
 }
 
 
-perlinMap Erosion::Erode(heightMap map, const int& mapSize)
+void Erosion::Erode(std::vector<float>& map, const int& mapSize)
 {
     /*
      * Goal: the drop is moved for each iteration of its lifetime from current position, posOld.
      */
-    perlinMap perlinValues = translateToPerlinMap(map, mapSize);
     Particle particle(getRandomPosition(mapSize));
     Params params;
 
     for(int i = 0; i < 30; ++i)
     {
         vec2 posOld = particle.pos;
-        heightAndGradient hg = calculateHeightAndGradient(perlinValues, posOld, mapSize);
+        heightAndGradient hg = calculateHeightAndGradient(map, posOld, mapSize);
         float heightOld = hg.height;
 
         particle.dir = particle.dir*params.intertia - hg.gradient*(1-params.intertia);
@@ -91,24 +89,26 @@ perlinMap Erosion::Erode(heightMap map, const int& mapSize)
         if(isOutOfTheMap(particle.pos, mapSize))
             break;
 
-        float heightNew = calculateHeightAndGradient(perlinValues, particle.pos, mapSize).height;
+        float heightNew = calculateHeightAndGradient(map, particle.pos, mapSize).height;
         float heightDiff = heightNew - heightOld;
-        float capacity = fmax (-heightDiff, params.minSlope)*particle.vel*particle.water*params.capacity;
-        if(particle.sediment > capacity)
+        // Want to be able to deposit flat terrain as well.
+        float capacity = fmax (-heightDiff * particle.vel * particle.water * params.capacity, params.minSediment);
+        if(particle.sediment > capacity || heightDiff > 0)
         {
-            float amount = (particle.sediment - capacity) * params.deposition;
+            float amount = (heightDiff > 0) ? fmin (heightDiff, particle.sediment) : (particle.sediment - capacity) * params.deposition;
             particle.sediment -= amount;
             float u = posOld.x - (int)posOld.x;
             float v = posOld.y - (int)posOld.y;
-            perlinValues[(int)posOld.y*mapSize+(int)posOld.x] += amount * (1 - u) * (1 - v);
-            perlinValues[(int)posOld.y*mapSize + (int)posOld.x+ 1] += amount * u * (1 - v);
-            perlinValues[(int)(posOld.y+1)*mapSize + (int)posOld.x] += amount * (1 - u) * v;
-            perlinValues[(int)(posOld.y+1)*mapSize + (int)posOld.x+1] += amount * u * v;
+            map[(int)posOld.y*mapSize+(int)posOld.x] += amount * (1 - u) * (1 - v);
+            map[(int)posOld.y*mapSize + (int)posOld.x+ 1] += amount * u * (1 - v);
+            map[(int)(posOld.y+1)*mapSize + (int)posOld.x] += amount * (1 - u) * v;
+            map[(int)(posOld.y+1)*mapSize + (int)posOld.x+1] += amount * u * v;
+
+
         }
         else
         {
             float amount = fmin((capacity-particle.sediment)*params.erosion, -heightDiff);
-
 
             int x_start = max((int) (posOld.x-params.radius), 1);
             int y_start = max((int) (posOld.y-params.radius), 1);
@@ -123,6 +123,7 @@ perlinMap Erosion::Erode(heightMap map, const int& mapSize)
                 for(int x = x_start; x < x_end; ++x)
                 {
                     float weight = max(0.0f, params.radius - length(vec2(x,y)-posOld));
+
                     weightSum += weight;
                     weights[x-x_start][y-y_start] = weight;
                 }
@@ -132,10 +133,11 @@ perlinMap Erosion::Erode(heightMap map, const int& mapSize)
                 for(int x = x_start; x < x_end; x++)
                 {
                     weights[x-x_start][y-y_start] /= weightSum;
-                    perlinValues[y*mapSize + x] -= amount * weights[x-x_start][y-y_start];
+                    map[y*mapSize + x] -= amount * weights[x-x_start][y-y_start];
+                    particle.sediment += amount * weights[x-x_start][y-y_start];
+
                 }
             }
-            particle.sediment += amount;
 
         }
 
@@ -143,5 +145,4 @@ perlinMap Erosion::Erode(heightMap map, const int& mapSize)
         particle.water = particle.water*(1-params.evaporation);
     }
 
-    return perlinValues;
 }

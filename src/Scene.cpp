@@ -5,10 +5,10 @@
 #include "Core/Mesh.h"
 #include "Core/Texture.h"
 #include "Core/Gui.h"
+#include "Erosion/Erosion.h"
 #include "Game.h"
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/noise.hpp>
-#include "Erosion/Erosion.h"
 #include <fastNoise/FastNoise.h>
 #include <random>
 
@@ -35,7 +35,7 @@ float inverseLerp(float a, float b, float value)
     }
 }
 
-std::vector<unsigned char> generateNoise(const noiseParams& params)
+std::vector<float> generateNoise(const noiseParams& params)
 {
 
     FastNoise noise;
@@ -49,8 +49,7 @@ std::vector<unsigned char> generateNoise(const noiseParams& params)
 
     float min = 0.0f;
     float max = 0.0f;
-    std::vector<unsigned char> noiseMap(256 * 256);
-    std::vector<float> perlinValues(256 * 256);
+    std::vector<float> map(256 * 256);
     int index = 0;
     for(int y = 0; y < 256; y++)
     {
@@ -61,22 +60,17 @@ std::vector<unsigned char> generateNoise(const noiseParams& params)
                 min = perlinValue;
             if(perlinValue > max)
                 max = perlinValue;
-            perlinValues[index] = perlinValue;
-            index++;
+            map[y*256+x] = perlinValue;
         }
     }
-
-    index = 0;
     for(int y = 0; y < 256; y++)
     {
         for(int x = 0; x < 256; x++)
         {
-            noiseMap[y * 256 + x] = inverseLerp(min, max, perlinValues[index]) * 255;
-            index++;
+            map[y * 256 + x] = inverseLerp(min, max, map[y * 256 + x]);
         }
     }
-
-    return noiseMap;
+    return map;
 }
 std::vector<Vertex> generatePlaneVertices(int div, float width) {
     std::vector<Vertex> vertices;
@@ -87,7 +81,10 @@ std::vector<Vertex> generatePlaneVertices(int div, float width) {
 
             glm::vec3 position(col * triangleSide, 0.0f, -row * triangleSide);
             glm::vec3 color(0.368f, 0.96f, 0.822f);
-            glm::vec2 uvCoords(stepSize * col, stepSize * row);
+            glm::vec2 uvCoords((col * stepSize)-0.5f, (row * stepSize)-0.5f);
+            uvCoords *= 0.95f;
+            uvCoords -= vec2(0.5);
+
             Vertex vertex = { position, color, uvCoords };
             vertices.push_back(vertex);
         }
@@ -116,12 +113,12 @@ std::vector<Index> generatePlaneIndices(int div)
 
 Scene::Scene()
 {
-    std::vector<Vertex> terrainVertices = generatePlaneVertices(2000, 4);
+    std::vector<Vertex> terrainVertices = generatePlaneVertices(2000, 3);
     std::vector<Index> terrainIndices = generatePlaneIndices(2000);
     terrain = std::make_unique<Mesh>(terrainVertices, terrainIndices);
     terrainShader = std::make_unique<Shader>("../shaders/terrain.vert", "../shaders/terrain.frag");
 
-    map = std::make_unique<Texture>(256, 256);
+    map = std::make_unique<Texture>(generateNoise(Game::getGui().getNoiseParams()),256, 256);
 
     terrainShader->bind();
     terrainShader->setInt("tex0", 0);
@@ -157,26 +154,10 @@ void drawTerrain(Shader& shader)
 
 }
 
-heightMap formatErodedMap(const perlinMap& erodedMap)
+
+std::vector<float> blurHeightMap(const std::vector<float>& map, const int& mapSize)
 {
-    std::vector<unsigned char> noiseMap(256 * 256);
-
-    int index = 0;
-    for(int y = 0; y < 256; y++)
-    {
-        for(int x = 0; x < 256; x++)
-        {
-            noiseMap[y * 256 + x] = max(0.0f, erodedMap[index]) * 255;
-            index++;
-        }
-    }
-
-    return noiseMap;
-}
-
-heightMap blurHeightMap(const heightMap& map, const int& mapSize)
-{
-    heightMap blurredMap(mapSize * mapSize);
+    std::vector<float> blurredMap(mapSize * mapSize);
 
     for (int y = 0; y < mapSize; ++y)
     {
@@ -190,7 +171,7 @@ heightMap blurHeightMap(const heightMap& map, const int& mapSize)
             }
             else
             {
-                int sum = map[(y - 1) * mapSize + (x - 1)] +  // Top left
+                float sum = map[(y - 1) * mapSize + (x - 1)] +  // Top left
                           map[(y - 1) * mapSize + x] +         // Top center
                           map[(y - 1) * mapSize + (x + 1)] +  // Top right
                           map[y * mapSize + (x - 1)] +        // Mid left
@@ -200,48 +181,51 @@ heightMap blurHeightMap(const heightMap& map, const int& mapSize)
                           map[(y + 1) * mapSize + x] +        // Low center
                           map[(y + 1) * mapSize + (x + 1)];   // Low right
 
-                blurredMap[targetPixel] = static_cast<unsigned char>(sum / 9);
+                blurredMap[targetPixel] = sum / 9;
             }
         }
     }
 
     return blurredMap;
 }
-heightMap mixBlur(const heightMap& map, const int& mapSize)
+
+
+void mixBlur(std::vector<float>& map, const int& mapSize)
 {
-    heightMap blurredMap = blurHeightMap(map, mapSize);
-    heightMap mixBlurred(mapSize * mapSize);
+
+    std::vector<float> blurredMap = blurHeightMap(map, mapSize);
     for(int y = 0; y < mapSize; ++y)
     {
         for(int x = 0; x < mapSize; ++x)
         {
-            mixBlurred[y*mapSize+x] = 0.7*blurredMap[y*mapSize+x]+(1-0.7)*map[y*mapSize+x];
+            map[y*mapSize+x] = 0.7*blurredMap[y*mapSize+x]+(1-0.7)*map[y*mapSize+x];
+
         }
     }
-    return mixBlurred;
 }
+
 void Scene::render()
 {
     Game::getGui().beginFrame();
 
     auto updated = Game::getGui().noiseParamsUpdated();
+
     if(updated.isUpdated)
     {
         map->updateTexture(generateNoise(updated.recentParams));
     }
-
     bool prevState = Game::getGui().isErosionEnabled;
     if(Game::getGui().toggleErode())
     {
-        perlinMap erodedMap = Erosion::Erode(map->getMap(), 256);
-        map->updateTexture(formatErodedMap(erodedMap));
-        iteration++;
-        std::cout << iteration << std::endl;
-
+        Erosion::Erode(map->getMap(), 256);
+        map->updateTexture(map->getMap());
+        std::cout << iteration++ << std::endl;
     }
+
     else if (prevState && !Game::getGui().isErosionEnabled)
     {
-        map->updateTexture(mixBlur(map->getMap(), 256));
+        mixBlur(map->getMap(), 256);
+        map->updateTexture(map->getMap());
     }
 
     drawTerrain(*terrainShader);

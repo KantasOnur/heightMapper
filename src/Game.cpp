@@ -7,16 +7,16 @@ std::unique_ptr<Scene> Game::scene_;
 std::unique_ptr<Input> Game::input_;
 std::unique_ptr<Camera> Game::camera_;
 std::unique_ptr<Gui> Game::gui_;
-bool Game::openGui = true;
+bool Game::openGui = false;
 
 Game::Game()
 {
     window_ = std::make_unique<Window>(640, 480);
+    gui_ = std::make_unique<Gui>(window_->getPtr());
     scene_ = std::make_unique<Scene>();
     //manager_ = std::make_unique<EventManager>();
     input_ = std::make_unique<Input>();
     camera_ = std::make_unique<Camera>();
-    gui_ = std::make_unique<Gui>(window_->getPtr());
 }
 
 void Game::run()
