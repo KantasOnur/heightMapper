@@ -14,6 +14,7 @@ public:
     ~Texture();
 
     void updateTexture(const std::vector<float>& textureData);
+    void updateTexture();
     void bind();
     void unbind();
 

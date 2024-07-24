@@ -30,6 +30,13 @@ void Texture::updateTexture(const std::vector<float>& textureData)
     map = textureData;
 }
 
+void Texture::updateTexture()
+{
+    bind();
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, GL_RED, GL_FLOAT, map.data());
+    unbind();
+
+}
 void Texture::bind()
 {
     glBindTexture(GL_TEXTURE_2D, id_);

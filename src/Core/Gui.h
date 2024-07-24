@@ -1,8 +1,9 @@
 #ifndef GUI_H
 #define GUI_H
+
 #include <memory>
-#include <ImGui/imgui_impl_opengl3.h>
 #include <GLFW/glfw3.h>
+//#include "Shader.h"
 
 struct noiseParams
 {
@@ -19,21 +20,26 @@ struct boolParams
     bool isUpdated;
     noiseParams recentParams;
 };
+struct uniformParams
+{
+    float grassThreshold;
+};
 class Gui
 {
 private:
     std::unique_ptr<noiseParams> noiseParamsPtr;
+    std::unique_ptr<uniformParams> uniformParamsPtr;
     bool isBlurEnabled;
 public:
     Gui(GLFWwindow* window);
     ~Gui();
     void beginFrame();
     void endFrame();
-
+    void addText(const int& val);
     const noiseParams getNoiseParams();
     bool toggleErode();
     bool toggleBlur();
-    bool erosionEnded();
+    uniformParams getUniformParams();
     boolParams noiseParamsUpdated();
     bool isErosionEnabled;
 };

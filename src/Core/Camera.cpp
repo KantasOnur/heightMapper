@@ -1,15 +1,16 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "Camera.h"
-#include <glm/gtx/string_cast.hpp>
 #include <complex>
+
 #include "../Game.h"
 
 Camera::Camera(float fov, glm::vec3 position, glm::vec3 up, glm::vec3 initialLookDir)
     : position_(position), up_(up), front_(initialLookDir),
-    yaw_(glm::degrees(atan2(initialLookDir.z, initialLookDir.x))),
-    pitch_(atan2(initialLookDir.y, sqrt(initialLookDir.x * initialLookDir.x + initialLookDir.z * initialLookDir.z))),
-    fov_(fov), initialLookDir_(initialLookDir)
+    fov_(fov)
 {
+    yaw_ = glm::degrees(atan2(initialLookDir.z, initialLookDir.x));
+    pitch_ = glm::degrees(atan2(initialLookDir.y, sqrt(initialLookDir.x*initialLookDir.x + initialLookDir.z*initialLookDir.z)));
+
     updateProjectionMatrix();
 }
 
@@ -53,7 +54,16 @@ void Camera::updatePosition(Input &input, float dt)
 
 void Camera::updateLookDir(Input &input, float dt)
 {
+    bool prevClick = initialClick;
     initialClick = input.isKeyPressed(GLFW_KEY_TAB) ? true : initialClick;
+
+    if(!prevClick && initialClick)
+    {
+        GLFWwindow* windowPtr = Game::getWindow().getPtr();
+        windowParams params = Game::getWindow().getParams();
+        glfwSetCursorPos(windowPtr, params.width/2, params.height/2);
+    }
+
     if(initialClick)
     {
         GLFWwindow* windowPtr = Game::getWindow().getPtr();
@@ -68,7 +78,6 @@ void Camera::updateLookDir(Input &input, float dt)
 
         float maxPitch = 89.0f;
         pitch_ = glm::clamp(pitch_, -maxPitch, maxPitch);
-
         glm::vec3 front;
         front.x = (cos(glm::radians(yaw_)) * cos(glm::radians(pitch_)));
         front.y = sin(glm::radians(pitch_));

@@ -15,7 +15,6 @@ private:
 
     static std::unique_ptr<Window> window_;
     static std::unique_ptr<Scene> scene_;
-    //static std::unique_ptr<EventManager> manager_;
     static std::unique_ptr<Input> input_;
     static std::unique_ptr<Camera> camera_;
     static std::unique_ptr<Gui> gui_;
@@ -25,7 +24,6 @@ public:
     void run();
 
     static Window& getWindow() {return *window_;}
-    //static EventManager& getManager() {return *manager_;}
     static Input& getInput() {return *input_;}
     static Camera& getCamera() {return *camera_;}
     static Gui& getGui() {return *gui_;}

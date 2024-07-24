@@ -13,7 +13,6 @@
 #include <random>
 
 using namespace glm;
-bool flag = true;
 
 std::unique_ptr<Mesh> water;
 std::unique_ptr<Mesh> terrain;
@@ -113,8 +112,8 @@ std::vector<Index> generatePlaneIndices(int div)
 
 Scene::Scene()
 {
-    std::vector<Vertex> terrainVertices = generatePlaneVertices(2000, 3);
-    std::vector<Index> terrainIndices = generatePlaneIndices(2000);
+    std::vector<Vertex> terrainVertices = generatePlaneVertices(500, 3);
+    std::vector<Index> terrainIndices = generatePlaneIndices(500);
     terrain = std::make_unique<Mesh>(terrainVertices, terrainIndices);
     terrainShader = std::make_unique<Shader>("../shaders/terrain.vert", "../shaders/terrain.frag");
 
@@ -125,21 +124,6 @@ Scene::Scene()
     terrainShader->unbind();
 }
 
-
-
-static void drawWater(Shader& shader)
-{
-    shader.bind();
-    map->bind();
-    shader.setMatrix4f("u_projectionMatrix", Game::getCamera().getProjection());
-    shader.setMatrix4f("u_modelViewMatrix", Game::getCamera().getView());
-    shader.setFloat1f("u_time", Game::getWindow().getTime());
-    shader.setVec3f("lightPos", Game::getCamera().getPosition());
-    shader.setVec3f("viewPos", Game::getCamera().getPosition());
-    water->draw(shader);
-    map->unbind();
-
-}
 
 void drawTerrain(Shader& shader)
 {
@@ -153,8 +137,6 @@ void drawTerrain(Shader& shader)
     map->unbind();
 
 }
-
-
 std::vector<float> blurHeightMap(const std::vector<float>& map, const int& mapSize)
 {
     std::vector<float> blurredMap(mapSize * mapSize);
@@ -188,8 +170,6 @@ std::vector<float> blurHeightMap(const std::vector<float>& map, const int& mapSi
 
     return blurredMap;
 }
-
-
 void mixBlur(std::vector<float>& map, const int& mapSize)
 {
 
@@ -198,7 +178,7 @@ void mixBlur(std::vector<float>& map, const int& mapSize)
     {
         for(int x = 0; x < mapSize; ++x)
         {
-            map[y*mapSize+x] = 0.7*blurredMap[y*mapSize+x]+(1-0.7)*map[y*mapSize+x];
+            map[y*mapSize+x] = 0.4*blurredMap[y*mapSize+x]+(1-0.4)*map[y*mapSize+x];
 
         }
     }
@@ -209,7 +189,6 @@ void Scene::render()
     Game::getGui().beginFrame();
 
     auto updated = Game::getGui().noiseParamsUpdated();
-
     if(updated.isUpdated)
     {
         map->updateTexture(generateNoise(updated.recentParams));
@@ -218,16 +197,21 @@ void Scene::render()
     if(Game::getGui().toggleErode())
     {
         Erosion::Erode(map->getMap(), 256);
-        map->updateTexture(map->getMap());
-        std::cout << iteration++ << std::endl;
+        map->updateTexture();
+        iteration++;
     }
 
     else if (prevState && !Game::getGui().isErosionEnabled)
     {
         mixBlur(map->getMap(), 256);
-        map->updateTexture(map->getMap());
+        map->updateTexture();
+        iteration = 0;
     }
 
+    uniformParams uParams = Game::getGui().getUniformParams();
+    terrainShader->setFloat1f("threshold", uParams.grassThreshold);
+
+    Game::getGui().addText(iteration);
     drawTerrain(*terrainShader);
     Game::getGui().endFrame();
 }

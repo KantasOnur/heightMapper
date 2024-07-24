@@ -1,5 +1,7 @@
 #include "Gui.h"
 #include <imGui/imgui_impl_glfw.h>
+#include <ImGui/imgui_impl_opengl3.h>
+
 #include "../Game.h"
 Gui::Gui(GLFWwindow* window)
 {
@@ -17,6 +19,8 @@ Gui::Gui(GLFWwindow* window)
     noiseParamsPtr->persistance = 0.0f;
     noiseParamsPtr->scale = 1.0f;
 
+    uniformParamsPtr = std::make_unique<uniformParams>();
+    uniformParamsPtr->grassThreshold = 0.0f;
     isErosionEnabled = false;
 }
 
@@ -54,7 +58,13 @@ const noiseParams Gui::getNoiseParams()
     return *noiseParamsPtr;
 
 }
-
+void Gui::addText(const int& val)
+{
+    if(Game::openGui)
+    {
+        ImGui::Text("Iterations: %d", val);
+    }
+}
 void Gui::endFrame()
 {
     if(Game::openGui)
@@ -102,3 +112,11 @@ bool Gui::toggleBlur()
     return !prevState && isBlurEnabled;
 }
 
+uniformParams Gui::getUniformParams()
+{
+    if(Game::openGui)
+    {
+        ImGui::SliderFloat("Snow Threshold", &uniformParamsPtr->grassThreshold, 0.0001f, 0.1f);
+    }
+    return *uniformParamsPtr;
+}

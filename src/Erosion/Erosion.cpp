@@ -7,40 +7,16 @@
 
 std::default_random_engine generator;
 
-float InverseLerp(float a, float b, float value)
-{
-    if (a != b)
-    {
-        return std::clamp((value - a) / (b - a), 0.0f, 1.0f);
-    }
-        return 0.0f; // or any appropriate value when a == b
-}
-
-perlinMap translateToPerlinMap(const heightMap& map, const int& mapSize)
-{
-    perlinMap perlinValues(mapSize * mapSize);
-    for(int y = 0; y < mapSize; ++y)
-    {
-        for(int x = 0; x < mapSize; ++x)
-        {
-            perlinValues[y*mapSize + x] = InverseLerp(0, 255, map[y*mapSize + x]);
-        }
-    }
-    return perlinValues;
-}
-
 vec2 getRandomPosition(int mapSize)
 {
     std::uniform_real_distribution<float> distribution(1,mapSize-1);
     return {distribution(generator), distribution(generator)};
 }
-
 bool isOutOfTheMap(const vec2& position, const int& mapSize)
 {
     return position.x <= 0 || position.x >= mapSize - 1 || position.y <= 0 || position.y >= mapSize -1;
 }
-
-heightAndGradient calculateHeightAndGradient(const perlinMap& map, const vec2& position, const int& mapSize)
+heightAndGradient calculateHeightAndGradient(const std::vector<float>& map, const vec2& position, const int& mapSize)
 {
     /* Since our cell is a unit square we can simplify the calculation to:
      *
@@ -64,13 +40,46 @@ heightAndGradient calculateHeightAndGradient(const perlinMap& map, const vec2& p
     float height = (1-x)*(1-y)*f00 + x*(1-y)*f10 + (1-x)*y*f01 + x*y*f11;
     return {height, gradient};
 }
+void deposit(const ivec2& ipos, const vec2& pos, std::vector<float>& map, const int& mapSize, const float& amount)
+{
+    float u = pos.x - ipos.x;
+    float v = pos.y - ipos.y;
+    map[ipos.y*mapSize+ipos.x] += amount * (1 - u) * (1 - v);
+    map[ipos.y*mapSize + ipos.x+ 1] += amount * u * (1 - v);
+    map[(ipos.y+1)*mapSize + ipos.x] += amount * (1 - u) * v;
+    map[(ipos.y+1)*mapSize + ipos.x+1] += amount * u * v;
+}
+void erode(const ivec2& ipos, const vec2& pos, std::vector<float>& map, const int& mapSize, const float& amount, const int& radius)
+{
+    int xStart = max(ipos.x-radius, 1);
+    int yStart = max(ipos.y-radius, 1);
 
+    int xEnd = min(mapSize-2, xStart*2*radius+1);
+    int yEnd = min(mapSize-2, yStart*2*radius+1);
 
+    float weightSum = 0.0f;
+    float weights[xEnd-xStart][yEnd-yStart];
+    for(int y = yStart; y < yEnd; ++y)
+    {
+        for(int x = xStart; x < xEnd; ++x)
+        {
+            float weight = max(0.0f, radius - length(vec2(x,y)-pos));
+
+            weightSum += weight;
+            weights[x-xStart][y-yStart] = weight;
+        }
+    }
+    for(int y = yStart; y < yEnd; ++y)
+    {
+        for(int x = xStart; x < xEnd; x++)
+        {
+            weights[x-xStart][y-yStart] /= weightSum;
+            map[y*mapSize + x] -= amount * weights[x-xStart][y-yStart];
+        }
+    }
+}
 void Erosion::Erode(std::vector<float>& map, const int& mapSize)
 {
-    /*
-     * Goal: the drop is moved for each iteration of its lifetime from current position, posOld.
-     */
     Particle particle(getRandomPosition(mapSize));
     Params params;
 
@@ -81,64 +90,29 @@ void Erosion::Erode(std::vector<float>& map, const int& mapSize)
         float heightOld = hg.height;
 
         particle.dir = particle.dir*params.intertia - hg.gradient*(1-params.intertia);
-        if(length(particle.dir)== 0)
+        if(length(particle.dir) == 0)
             break;
         particle.dir = normalize(particle.dir);
         particle.pos += particle.dir;
-
         if(isOutOfTheMap(particle.pos, mapSize))
             break;
 
         float heightNew = calculateHeightAndGradient(map, particle.pos, mapSize).height;
         float heightDiff = heightNew - heightOld;
-        // Want to be able to deposit flat terrain as well.
-        float capacity = fmax (-heightDiff * particle.vel * particle.water * params.capacity, params.minSediment);
+        float capacity = fmax(-heightDiff, params.minSlope)*particle.vel*particle.water*params.capacity;
+
         if(particle.sediment > capacity || heightDiff > 0)
         {
+            // if the particle going up the terrain then fill up the currrent height.
             float amount = (heightDiff > 0) ? fmin (heightDiff, particle.sediment) : (particle.sediment - capacity) * params.deposition;
             particle.sediment -= amount;
-            float u = posOld.x - (int)posOld.x;
-            float v = posOld.y - (int)posOld.y;
-            map[(int)posOld.y*mapSize+(int)posOld.x] += amount * (1 - u) * (1 - v);
-            map[(int)posOld.y*mapSize + (int)posOld.x+ 1] += amount * u * (1 - v);
-            map[(int)(posOld.y+1)*mapSize + (int)posOld.x] += amount * (1 - u) * v;
-            map[(int)(posOld.y+1)*mapSize + (int)posOld.x+1] += amount * u * v;
-
-
+            deposit({posOld.x,posOld.y}, posOld, map, mapSize, amount);
         }
         else
         {
             float amount = fmin((capacity-particle.sediment)*params.erosion, -heightDiff);
-
-            int x_start = max((int) (posOld.x-params.radius), 1);
-            int y_start = max((int) (posOld.y-params.radius), 1);
-
-            int x_end = min(mapSize-2, x_start*2*params.radius+1);
-            int y_end = min(mapSize-2, y_start*2*params.radius+1);
-
-            float weightSum = 0.0f;
-            float weights[x_end-x_start][y_end-y_start];
-            for(int y = y_start; y < y_end; ++y)
-            {
-                for(int x = x_start; x < x_end; ++x)
-                {
-                    float weight = max(0.0f, params.radius - length(vec2(x,y)-posOld));
-
-                    weightSum += weight;
-                    weights[x-x_start][y-y_start] = weight;
-                }
-            }
-            for(int y = y_start; y < y_end; ++y)
-            {
-                for(int x = x_start; x < x_end; x++)
-                {
-                    weights[x-x_start][y-y_start] /= weightSum;
-                    map[y*mapSize + x] -= amount * weights[x-x_start][y-y_start];
-                    particle.sediment += amount * weights[x-x_start][y-y_start];
-
-                }
-            }
-
+            particle.sediment += amount;
+            erode({posOld.x,posOld.y}, posOld, map, mapSize, amount, params.radius);
         }
 
         particle.vel = sqrt(particle.vel*particle.vel + heightDiff*params.gravity);
