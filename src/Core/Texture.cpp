@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <GL/glew.h>
-#include <stb/stb_image.h>
 Texture::Texture(const std::vector<float>& textureData, const int& width, const int& height)
     :width_(width), height_(height)
 {

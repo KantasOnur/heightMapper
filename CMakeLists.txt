@@ -26,7 +26,6 @@ add_executable(heightMapper
         src/Events/EventManager.h
         src/Core/Camera.cpp
         src/Core/Camera.h
-        src/Core/stb.cpp
         src/Core/Texture.cpp
         src/Core/Texture.h
         dependencies/include/fastNoise/FastNoise.cpp
