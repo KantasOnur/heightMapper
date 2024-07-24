@@ -20,13 +20,14 @@ cmake ..
 ```
 
 ## Some Examples
+The examples are after 70k iterations, which takes quite a while.
 <p align="center">
-  <img src="assets/before1.png" width="400"/>
-  <img src="assets/after1.png" width="400"/> 
+  <img src="assets/before1.png" width="300"/>
+  <img src="assets/after1.png" width="300"/> 
 </p>
 <p align="center">
-  <img src="assets/before2.png" width="400"/>
-  <img src="assets/after2.png" width="400"/>
+  <img src="assets/before2.png" width="300"/>
+  <img src="assets/after2.png" width="300"/>
 </p>
 
 ## References
